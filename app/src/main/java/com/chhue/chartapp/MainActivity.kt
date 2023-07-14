@@ -1,75 +1,97 @@
 package com.chhue.chartapp
 
-import android.R
-import android.content.Context
 import android.graphics.Color
 import android.os.Bundle
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import com.chhue.chartapp.databinding.ActivityMainBinding
 import com.github.mikephil.charting.charts.LineChart
+import com.github.mikephil.charting.components.Description
+import com.github.mikephil.charting.components.XAxis
+import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
-import com.github.mikephil.charting.interfaces.datasets.ILineDataSet
-import java.io.BufferedReader
-import java.io.IOException
+import com.opencsv.CSVReader
 import java.io.InputStreamReader
-import java.nio.charset.StandardCharsets
 
 
 class MainActivity : AppCompatActivity() {
 
     val binding by lazy { ActivityMainBinding.inflate(layoutInflater) }
+
+    val red = "#FFFF0000"
+    val blue = "#FF0000FF"
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
 
-        val chart = binding.chart
-        val entriesList = getItemList()
-        showGraph(chart, entriesList)
-    }
+        val assetManager = this.assets
+        val inputStream = assetManager.open("ncer.csv")
+        val entriesRed1 = ArrayList<Entry>()
+        val entriesRed2 = ArrayList<Entry>()
+        val entriesRed3 = ArrayList<Entry>()
+        val entriesBlue1 = ArrayList<Entry>()
+        val entriesBlue2 = ArrayList<Entry>()
+        val entriesBlue3 = ArrayList<Entry>()
 
-    @Throws(IOException::class)
-    fun getItemList(): List<Item> {
-        val `is` = InputStreamReader(assets.open("ncer.csv"))
-        val reader = BufferedReader(`is`)
-        var line = ""
-        val itemList: MutableList<Item> = mutableListOf()
-        while (reader.readLine().also { line = it } != null) {
-            val tokens = line.split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-            val item = Item()
-            item.setTime(tokens[0].toDouble())
-            item.setRed1(tokens[1].toDouble())
-            item.setRed2(tokens[2].toDouble())
-            item.setRed3(tokens[3].toDouble())
-            item.setBlue1(tokens[4].toDouble())
-            item.setBlue2(tokens[5].toDouble())
-            item.setBlue3(tokens[6].toDouble())
-            itemList.add(item) // 반환할 리스트에 파싱된 행 데이터 저장
+        val reader = CSVReader(InputStreamReader(inputStream))
+
+        val allContent = reader.readAll()
+        for(content in allContent) {
+            Log.i("ttt", content.toList().toString())
+            var contentList = content.toList()
+            entriesRed1.add(Entry(contentList[0].toFloat(),contentList[1].toFloat()))
+            entriesRed2.add(Entry(contentList[0].toFloat(),contentList[2].toFloat()))
+            entriesRed3.add(Entry(contentList[0].toFloat(),contentList[3].toFloat()))
+            entriesBlue1.add(Entry(contentList[0].toFloat(),contentList[4].toFloat()))
+            entriesBlue2.add(Entry(contentList[0].toFloat(),contentList[5].toFloat()))
+            entriesBlue3.add(Entry(contentList[0].toFloat(),contentList[6].toFloat()))
+
         }
-        reader.close()
-        `is`.close()
-        return itemList
+
+        setChart(entriesRed1, entriesBlue1, "Red1", "Blue1", binding.chart1, "chart1")
+        setChart(entriesRed2, entriesBlue2, "Red2", "Blue2", binding.chart2, "chart2")
+        setChart(entriesRed3, entriesBlue3, "Red3", "Blue3", binding.chart3, "chart3")
+
     }
 
-    private fun showGraph(chart:LineChart, entriesList:List<Item>) {
-        val dataSets = mutableListOf<ILineDataSet>()
+    fun setChart(entriesR:ArrayList<Entry>, entriesB:ArrayList<Entry>, label1:String, label2:String, lineChart: LineChart, chartName:String) {
 
-        // 빨간색(Red) 팀 데이터 설정
-        val redEntries = entriesList[0]
-        val redDataSet = LineDataSet(redEntries, "Red Team")
-        redDataSet.color = Color.RED
-        dataSets.add(redDataSet)
+        val lineDataSetR = LineDataSet(entriesR, label1)
+        lineDataSetR.lineWidth = 2f
+        lineDataSetR.circleRadius = 2f
+        lineDataSetR.setCircleColor(Color.parseColor(red));
+        lineDataSetR.color = Color.parseColor(red);
 
-        // 파란색(Blue) 팀 데이터 설정
-        val blueEntries = entriesList[1]
-        val blueDataSet = LineDataSet(blueEntries, "Blue Team")
-        blueDataSet.color = Color.BLUE
-        dataSets.add(blueDataSet)
+        val lineDataSetB = LineDataSet(entriesB, label2)
+        lineDataSetB.lineWidth = 2f
+        lineDataSetB.circleRadius = 2f
+        lineDataSetB.setCircleColor(Color.parseColor(blue));
+        lineDataSetB.color = Color.parseColor(blue);
 
-        val lineData = LineData(dataSets)
+        val lineData = LineData()
+        lineData.addDataSet(lineDataSetR)
+        lineData.addDataSet(lineDataSetB)
+        lineChart.data = lineData
 
-        chart.data = lineData
-        chart.invalidate()
+        val xAxis = lineChart.xAxis
+        xAxis.position = XAxis.XAxisPosition.BOTTOM
+        xAxis.textColor = Color.BLACK
+        xAxis.enableGridDashedLine(8f, 24f, 0f)
+
+        val yLAxis = lineChart.axisLeft
+        yLAxis.textColor = Color.BLACK
+
+        val yRAxis = lineChart.axisRight
+        yRAxis.setDrawLabels(false)
+        yRAxis.setDrawAxisLine(false)
+        yRAxis.setDrawGridLines(false)
+
+        val description = Description()
+        description.text = chartName
+        lineChart.description = description
+
     }
 
 
